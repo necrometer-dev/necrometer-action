@@ -1,0 +1,51 @@
+name: necrometer
+description: carves the necrometer card into your repo — measures how dead your github is
+author: necrometer-dev
+branding:
+  icon: activity        # the EKG — this is a vitals monitor, technically
+  color: purple
+inputs:
+  subject:
+    description: user or org to weigh
+    required: false
+    default: ""
+  file:
+    description: output card path, relative to repo root
+    required: false
+    default: necrometer.svg
+  token:
+    description: >-
+      token with repo read for the subject — defaults to GITHUB_TOKEN, which
+      covers the repo owner's own private repos. For an org with private repos
+      you don't own, pass a NECRO_TOKEN secret (fine-grained PAT).
+    required: false
+    default: ""
+  release:
+    description: necrometer release tag to summon
+    required: false
+    default: v0.1.0
+runs:
+  using: composite
+  steps:
+    - name: summon the necrometer
+      shell: bash
+      run: |
+        cd "$RUNNER_TEMP"
+        REL="https://github.com/necrometer-dev/necrometer/releases/download/${{ inputs.release }}"
+        curl -sSLO "$REL/necrometer-x86_64-unknown-linux-musl.tar.gz"
+        curl -sSLO "$REL/SHA256SUMS"
+        sha256sum -c SHA256SUMS
+        tar xzf necrometer-x86_64-unknown-linux-musl.tar.gz
+    - name: carve the card
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token || github.token }}
+      run: '"$RUNNER_TEMP/necrometer" card "${{ inputs.subject || github.repository_owner }}" "${{ inputs.file }}"'
+    - name: commit the reading
+      shell: bash
+      run: |
+        git config user.name "necrometer[bot]"
+        git config user.email "bot@necrometer.dev"
+        git add "${{ inputs.file }}"
+        git diff --cached --quiet || git commit -m "necrometer: $(date +%F)"
+        git push
