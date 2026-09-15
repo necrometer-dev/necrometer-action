@@ -30,5 +30,8 @@ jobs:
           sha256sum --strict --check SHA256SUMS
           tar --extract --gzip --file seance-x86_64-unknown-linux-musl.tar.gz
           test -x seance
-          ./seance card 2>&1 | grep -q 'usage: seance card'
+          set +e
+          ./seance card >/tmp/seance-card.out 2>&1
+          set -e
+          grep -q 'usage: seance card' /tmp/seance-card.out
           echo "ok summoned ${REL}"
