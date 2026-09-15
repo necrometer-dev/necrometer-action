@@ -23,7 +23,7 @@ inputs:
   release:
     description: necrometer release tag to summon
     required: false
-    default: v0.4.1
+    default: v0.4.2
 runs:
   using: composite
   steps:
@@ -39,14 +39,14 @@ runs:
         # redirects to plain HTTP.
         REL="https://github.com/necrometer-dev/necrometer/releases/download/${NECRO_RELEASE}"
         curl --fail --proto '=https' --tlsv1.2 --silent --show-error --location \
-          --output necrometer-x86_64-unknown-linux-musl.tar.gz \
-          "${REL}/necrometer-x86_64-unknown-linux-musl.tar.gz"
+          --output seance-x86_64-unknown-linux-musl.tar.gz \
+          "${REL}/seance-x86_64-unknown-linux-musl.tar.gz"
         curl --fail --proto '=https' --tlsv1.2 --silent --show-error --location \
           --output SHA256SUMS "${REL}/SHA256SUMS"
         # SHA256SUMS ships a single entry keyed on the tarball name. -c
         # exits non-zero if the checksum drifts, which fails the step.
         sha256sum --strict --check SHA256SUMS
-        tar --extract --gzip --file necrometer-x86_64-unknown-linux-musl.tar.gz
+        tar --extract --gzip --file seance-x86_64-unknown-linux-musl.tar.gz
     - name: carve the card
       shell: bash
       env:
@@ -71,7 +71,7 @@ runs:
         if [[ "${NECRO_FILE}" =~ [[:cntrl:]] ]]; then
           echo "refusing output path containing control characters" >&2; exit 2
         fi
-        "$RUNNER_TEMP/necrometer" card "${NECRO_SUBJECT}" "${NECRO_FILE}"
+        "$RUNNER_TEMP/seance" card "${NECRO_SUBJECT}" "${NECRO_FILE}"
     - name: commit the reading
       shell: bash
       env:
