@@ -82,7 +82,7 @@ runs:
         git config user.email "bot@necrometer.dev"
         # Rebase before pushing so a concurrent run that committed the same
         # file doesn't get clobbered.
-        git pull --rebase --autostash || true
+        git pull --rebase --autostash
         git add "${NECRO_FILE}"
         git diff --cached --quiet || git commit -m "necrometer: $(date +%F)"
         git push

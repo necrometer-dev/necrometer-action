@@ -1,0 +1,25 @@
+name: retag v1
+
+# Cutting an action version tag (v0.x.y) moves the floating v1 tag to
+# that commit so `necrometer-action@v1` cannot rot on an old engine.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  retag:
+    if: startsWith(github.ref, 'refs/tags/v') && github.ref != 'refs/tags/v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: force-move v1 to this tag
+        run: |
+          set -euo pipefail
+          git tag -f v1 "${GITHUB_SHA}"
+          git push origin v1 --force
+          echo "v1 -> ${GITHUB_SHA} (${GITHUB_REF_NAME})"

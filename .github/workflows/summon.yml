@@ -1,0 +1,34 @@
+name: summon
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+permissions: { contents: read }
+
+jobs:
+  checksum:
+    name: download pinned tarball + sha256
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: summon the default release
+        run: |
+          set -euo pipefail
+          REL=$(awk '/^    default: v/{print $2; exit}' action.yml)
+          echo "default release=${REL}"
+          test -n "$REL"
+          cd "$RUNNER_TEMP"
+          URL="https://github.com/necrometer-dev/necrometer/releases/download/${REL}"
+          curl --fail --proto '=https' --tlsv1.2 --silent --show-error --location \
+            --output seance-x86_64-unknown-linux-musl.tar.gz \
+            "${URL}/seance-x86_64-unknown-linux-musl.tar.gz"
+          curl --fail --proto '=https' --tlsv1.2 --silent --show-error --location \
+            --output SHA256SUMS "${URL}/SHA256SUMS"
+          sha256sum --strict --check SHA256SUMS
+          tar --extract --gzip --file seance-x86_64-unknown-linux-musl.tar.gz
+          test -x seance
+          ./seance card 2>&1 | grep -q 'usage: seance card'
+          echo "ok summoned ${REL}"
