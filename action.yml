@@ -23,29 +23,66 @@ inputs:
   release:
     description: necrometer release tag to summon
     required: false
-    default: v0.2.1
+    default: v0.3.0
 runs:
   using: composite
   steps:
     - name: summon the necrometer
       shell: bash
+      env:
+        NECRO_RELEASE: ${{ inputs.release }}
       run: |
+        set -euo pipefail
         cd "$RUNNER_TEMP"
-        REL="https://github.com/necrometer-dev/necrometer/releases/download/${{ inputs.release }}"
-        curl -sSLO "$REL/necrometer-x86_64-unknown-linux-musl.tar.gz"
-        curl -sSLO "$REL/SHA256SUMS"
-        sha256sum -c SHA256SUMS
-        tar xzf necrometer-x86_64-unknown-linux-musl.tar.gz
+        # GitHub release asset names are pinned by tag. Pin the protocol and
+        # TLS version, fail loudly on HTTP errors, and refuse to follow
+        # redirects to plain HTTP.
+        REL="https://github.com/necrometer-dev/necrometer/releases/download/${NECRO_RELEASE}"
+        curl --fail --proto '=https' --tlsv1.2 --silent --show-error --location \
+          --output necrometer-x86_64-unknown-linux-musl.tar.gz \
+          "${REL}/necrometer-x86_64-unknown-linux-musl.tar.gz"
+        curl --fail --proto '=https' --tlsv1.2 --silent --show-error --location \
+          --output SHA256SUMS "${REL}/SHA256SUMS"
+        # SHA256SUMS ships a single entry keyed on the tarball name. -c
+        # exits non-zero if the checksum drifts, which fails the step.
+        sha256sum --strict --check SHA256SUMS
+        tar --extract --gzip --file necrometer-x86_64-unknown-linux-musl.tar.gz
     - name: carve the card
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token || github.token }}
-      run: '"$RUNNER_TEMP/necrometer" card "${{ inputs.subject || github.repository_owner }}" "${{ inputs.file }}"'
+        NECRO_SUBJECT: ${{ inputs.subject || github.repository_owner }}
+        NECRO_FILE: ${{ inputs.file }}
+      run: |
+        set -euo pipefail
+        # Reject anything that isn't a simple GitHub login: no path
+        # separators, no leading dashes, alphanumeric + hyphen only.
+        case "${NECRO_SUBJECT}" in
+          -*) echo "refusing subject that starts with a dash: ${NECRO_SUBJECT}" >&2; exit 2 ;;
+          */*) echo "refusing subject containing a slash: ${NECRO_SUBJECT}" >&2; exit 2 ;;
+        esac
+        if [[ ! "${NECRO_SUBJECT}" =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,38}$ ]]; then
+          echo "refusing subject that is not a valid GitHub login: ${NECRO_SUBJECT}" >&2; exit 2
+        fi
+        # Reject output paths that try to escape the workspace.
+        case "${NECRO_FILE}" in
+          /*|..|../*|*/../*|*\\..*) echo "refusing output path: ${NECRO_FILE}" >&2; exit 2 ;;
+        esac
+        if [[ "${NECRO_FILE}" =~ [[:cntrl:]] ]]; then
+          echo "refusing output path containing control characters" >&2; exit 2
+        fi
+        "$RUNNER_TEMP/necrometer" card "${NECRO_SUBJECT}" "${NECRO_FILE}"
     - name: commit the reading
       shell: bash
+      env:
+        NECRO_FILE: ${{ inputs.file }}
       run: |
+        set -euo pipefail
         git config user.name "necrometer[bot]"
         git config user.email "bot@necrometer.dev"
-        git add "${{ inputs.file }}"
+        # Rebase before pushing so a concurrent run that committed the same
+        # file doesn't get clobbered.
+        git pull --rebase --autostash || true
+        git add "${NECRO_FILE}"
         git diff --cached --quiet || git commit -m "necrometer: $(date +%F)"
         git push
