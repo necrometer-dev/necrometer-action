@@ -1,0 +1,3 @@
+# CODEOWNERS — every change requires @UberMetroid review.
+* @UberMetroid
+/action.yml @UberMetroid
