@@ -50,16 +50,19 @@ Then bind it in your README:
 | `subject` | repo owner | user or org to weigh |
 | `file` | `necrometer.svg` | where the card is carved |
 | `token` | `GITHUB_TOKEN` | pass `secrets.NECRO_TOKEN` for orgs with private repos |
-| `release` | `v0.4.3` | which release to summon |
+| `release` | `v0.4.5` | which release to summon |
 
 ## rules of the craft
 
-- The binary is pinned to a release tag and checksum-verified before it runs —
-  the workflow never executes mutable remote code.
+- `@v1` is a moving tag on this repo — it tracks the current action. The
+  engine binary it summons is pinned to the `release` input (default above)
+  and SHA-256 verified (`sha256sum --strict --check`) before it runs.
+  Don't set `release:` unless you need a specific engine tag; don't
+  download the binary yourself.
 - Nothing is hosted by necrometer.dev. The card lives in your repo; GitHub's
   runners do the digging.
 - Repo must be checked out first (`actions/checkout`) — the action commits and
-  pushes the card itself.
+  pushes the card itself. Do not set `persist-credentials: false`.
 
 ---
 
