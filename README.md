@@ -50,7 +50,7 @@ Then bind it in your README:
 | `subject` | repo owner | user or org to weigh |
 | `file` | `necrometer.svg` | where the card is carved |
 | `token` | `GITHUB_TOKEN` | pass `secrets.NECRO_TOKEN` for orgs with private repos |
-| `release` | `v0.4.6` | which release to summon |
+| `release` | `v0.4.7` | which release to summon |
 
 ## rules of the craft
 
