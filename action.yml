@@ -23,7 +23,7 @@ inputs:
   release:
     description: necrometer release tag to summon
     required: false
-    default: v0.4.5
+    default: v0.4.6
 runs:
   using: composite
   steps:
